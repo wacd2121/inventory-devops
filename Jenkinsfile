@@ -1,12 +1,15 @@
 pipeline {
+
     agent any
 
     environment {
-        DOCKER_IMAGE = 'tileflow-app'
-        DOCKER_TAG = "build-${BUILD_NUMBER}"
+        IMAGE_NAME = 'inventory-devops'
+        CONTAINER_NAME = 'inventory-app'
+        PHP_EXE = 'D:\\xampp\\php\\php.exe'
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 echo 'Checking out source code...'
@@ -16,43 +19,70 @@ pipeline {
 
         stage('Lint PHP Syntax') {
             steps {
-                echo 'Running static syntax check (php -l) on all sources...'
-                // Loop through PHP files and run syntax linting.
-                // If running on windows agent we can wrap in bat, but sh is standard.
-                // We use sh for standard linux build nodes.
-                sh 'find . -name "*.php" -not -path "*/vendor/*" -exec php -l {} \\;'
+                echo 'Running PHP syntax validation...'
+
+                bat '''
+                    "%PHP_EXE%" -v
+                    "%PHP_EXE%" -l index.php
+                    "%PHP_EXE%" -l login.php
+                    "%PHP_EXE%" -l logout.php
+                    "%PHP_EXE%" -l dashboard.php
+                    "%PHP_EXE%" -l categories/add.php
+                    "%PHP_EXE%" -l categories/index.php
+                    "%PHP_EXE%" -l products/add.php
+                    "%PHP_EXE%" -l products/edit.php
+                    "%PHP_EXE%" -l products/delete.php
+                    "%PHP_EXE%" -l products/index.php
+                    "%PHP_EXE%" -l config/database.php
+                    "%PHP_EXE%" -l includes/auth.php
+                    "%PHP_EXE%" -l includes/header.php
+                    "%PHP_EXE%" -l includes/footer.php
+                '''
             }
         }
 
         stage('Run Test Automation') {
             steps {
-                echo 'Running test assertions in isolation...'
-                sh 'php tests/test.php'
+                echo 'Running application tests...'
+
+                bat '''
+                    "%PHP_EXE%" tests/test.php
+                '''
             }
         }
 
         stage('Build Docker Images') {
             steps {
-                echo 'Building application Docker image...'
-                sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                echo 'Building Docker image...'
+
+                bat '''
+                    docker build -t %IMAGE_NAME% .
+                '''
             }
         }
 
         stage('Deploy Stack') {
             steps {
-                echo 'Spinning up containerized development stack...'
-                sh "docker compose up -d --build"
-                echo 'Stack successfully deployed and verified.'
+                echo 'Deploying Inventory Management System...'
+
+                bat '''
+                    docker compose up -d
+                '''
             }
         }
     }
 
     post {
         success {
-            echo "SUCCESS: Jenkins build #${BUILD_NUMBER} completed without errors."
+            echo 'SUCCESS: Jenkins pipeline completed successfully.'
         }
+
         failure {
-            echo "FAILURE: Jenkins build #${BUILD_NUMBER} failed. Review logs for details."
+            echo 'FAILURE: Jenkins pipeline failed. Review the console output.'
+        }
+
+        always {
+            echo 'Jenkins pipeline execution completed.'
         }
     }
 }
