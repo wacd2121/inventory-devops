@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: tileflow_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: inventory_db
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./database/inventory.sql:/docker-entrypoint-initdb.d/init.sql
+      - db_data:/var/lib/mysql
+
+  web:
+    build: .
+    container_name: tileflow_web
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      DB_HOST: db
+      DB_NAME: inventory_db
+      DB_USER: root
+      DB_PASS: rootpassword
+    depends_on:
+      - db
+
+volumes:
+  db_data:
