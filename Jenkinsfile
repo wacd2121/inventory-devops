@@ -82,15 +82,15 @@ pipeline {
         }
 
         stage('Wait for Database') {
-            steps {
+    steps {
 
-                echo 'Waiting for MySQL container...'
+        echo 'Waiting for MySQL container...'
 
-                bat '''
-                    timeout /t 15 /nobreak
-                '''
-            }
-        }
+        bat '''
+            powershell -NoProfile -Command "Start-Sleep -Seconds 15"
+        '''
+    }
+}
 
         stage('Run Test Automation') {
             steps {
