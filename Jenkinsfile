@@ -3,8 +3,14 @@ pipeline {
     agent any
 
     environment {
+
         PHP_EXE = 'D:\\xampp\\php\\php.exe'
-        DOCKER_EXE = 'C:\\Users\\Administrator\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe'
+
+        DOCKER_EXE =
+            'C:\\Users\\Administrator\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe'
+
+        COMPOSE_EXE =
+            'C:\\Users\\Administrator\\.docker\\cli-plugins\\docker-compose.exe'
 
         IMAGE_NAME = 'inventory-devops'
 
@@ -57,6 +63,7 @@ pipeline {
 
                 bat '''
                     "%DOCKER_EXE%" --version
+
                     "%DOCKER_EXE%" build -t %IMAGE_NAME% .
                 '''
             }
@@ -68,7 +75,8 @@ pipeline {
                 echo 'Starting MySQL and TileFlow containers...'
 
                 bat '''
-                    "%DOCKER_EXE%" compose up -d
+                    "%COMPOSE_EXE%" version
+                    "%COMPOSE_EXE%" up -d
                 '''
             }
         }
@@ -106,7 +114,7 @@ pipeline {
                 echo 'Verifying Docker deployment...'
 
                 bat '''
-                    "%DOCKER_EXE%" compose ps
+                    "%COMPOSE_EXE%" ps
                 '''
             }
         }
@@ -119,7 +127,7 @@ pipeline {
         }
 
         failure {
-            echo 'FAILURE: Jenkins pipeline failed. Review the console output.'
+            echo 'FAILURE: Jenkins pipeline failed. Review the Jenkins console output.'
         }
 
         always {
