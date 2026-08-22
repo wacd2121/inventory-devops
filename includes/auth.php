@@ -1,38 +1,67 @@
 <?php
 // includes/auth.php
 
-if (session_status() === PHP_SESSION_NONE) {
+// Start sessions only for normal web requests.
+// Jenkins/CLI tests do not need a PHP session.
+if (PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-function isLoggedIn() {
+/**
+ * Check whether the current user is logged in.
+ */
+function isLoggedIn(): bool
+{
     return isset($_SESSION['user_id']);
 }
 
-function requireLogin() {
+/**
+ * Require the user to be logged in.
+ */
+function requireLogin(): void
+{
     if (!isLoggedIn()) {
         header("Location: " . base_url('login.php'));
         exit;
     }
 }
 
-function requireAdmin() {
+/**
+ * Require the user to have administrator privileges.
+ */
+function requireAdmin(): void
+{
     requireLogin();
+
     if (($_SESSION['user_role'] ?? '') !== 'admin') {
         header("Location: " . base_url('dashboard.php?error=unauthorized'));
         exit;
     }
 }
 
-function base_url($path = '') {
-    static $base = null;
-    if ($base === null) {
-        $requestUri = $_SERVER['REQUEST_URI'] ?? '';
-        if (strpos($requestUri, '/inventory-devops') !== false) {
-            $base = '/inventory-devops/';
-        } else {
-            $base = '/';
-        }
+/**
+ * Generate application-relative URLs.
+ *
+ * When deployed under /inventory-devops/, the function returns:
+ * /inventory-devops/...
+ *
+ * When deployed at the web root, it returns:
+ * /...
+ */
+function base_url(string $path = ''): string
+{
+    $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+    $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+
+    $base = '/';
+
+    // Detect the XAMPP project directory.
+    if (
+        strpos($requestUri, '/inventory-devops/') === 0 ||
+        strpos($scriptName, '/inventory-devops/') === 0
+    ) {
+        $base = '/inventory-devops/';
     }
+
     return $base . ltrim($path, '/');
 }
