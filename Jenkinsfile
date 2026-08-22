@@ -3,9 +3,15 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'inventory-devops'
-        CONTAINER_NAME = 'inventory-app'
         PHP_EXE = 'D:\\xampp\\php\\php.exe'
+        DOCKER_EXE = 'C:\\Users\\Administrator\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe'
+
+        IMAGE_NAME = 'inventory-devops'
+
+        DB_HOST = '127.0.0.1'
+        DB_NAME = 'inventory_db'
+        DB_USER = 'root'
+        DB_PASS = 'rootpassword'
     }
 
     stages {
@@ -19,20 +25,23 @@ pipeline {
 
         stage('Lint PHP Syntax') {
             steps {
+
                 echo 'Running PHP syntax validation...'
 
                 bat '''
-                    "%PHP_EXE%" -v
                     "%PHP_EXE%" -l index.php
                     "%PHP_EXE%" -l login.php
                     "%PHP_EXE%" -l logout.php
                     "%PHP_EXE%" -l dashboard.php
+
                     "%PHP_EXE%" -l categories/add.php
                     "%PHP_EXE%" -l categories/index.php
+
                     "%PHP_EXE%" -l products/add.php
                     "%PHP_EXE%" -l products/edit.php
                     "%PHP_EXE%" -l products/delete.php
                     "%PHP_EXE%" -l products/index.php
+
                     "%PHP_EXE%" -l config/database.php
                     "%PHP_EXE%" -l includes/auth.php
                     "%PHP_EXE%" -l includes/header.php
@@ -41,38 +50,70 @@ pipeline {
             }
         }
 
-        stage('Run Test Automation') {
+        stage('Build Docker Image') {
             steps {
-                echo 'Running application tests...'
+
+                echo 'Building Docker image...'
 
                 bat '''
+                    "%DOCKER_EXE%" --version
+                    "%DOCKER_EXE%" build -t %IMAGE_NAME% .
+                '''
+            }
+        }
+
+        stage('Start Docker Stack') {
+            steps {
+
+                echo 'Starting MySQL and TileFlow containers...'
+
+                bat '''
+                    "%DOCKER_EXE%" compose up -d
+                '''
+            }
+        }
+
+        stage('Wait for Database') {
+            steps {
+
+                echo 'Waiting for MySQL container...'
+
+                bat '''
+                    timeout /t 15 /nobreak
+                '''
+            }
+        }
+
+        stage('Run Test Automation') {
+            steps {
+
+                echo 'Running automated tests...'
+
+                bat '''
+                    set DB_HOST=%DB_HOST%
+                    set DB_NAME=%DB_NAME%
+                    set DB_USER=%DB_USER%
+                    set DB_PASS=%DB_PASS%
+
                     "%PHP_EXE%" tests/test.php
                 '''
             }
         }
 
-        stage('Build Docker Images') {
+        stage('Verify Deployment') {
             steps {
-                echo 'Building Docker image...'
+
+                echo 'Verifying Docker deployment...'
 
                 bat '''
-                    docker build -t %IMAGE_NAME% .
-                '''
-            }
-        }
-
-        stage('Deploy Stack') {
-            steps {
-                echo 'Deploying Inventory Management System...'
-
-                bat '''
-                    docker compose up -d
+                    "%DOCKER_EXE%" compose ps
                 '''
             }
         }
     }
 
     post {
+
         success {
             echo 'SUCCESS: Jenkins pipeline completed successfully.'
         }
